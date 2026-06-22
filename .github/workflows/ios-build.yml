@@ -12,7 +12,7 @@ on:
       - '.github/workflows/ios-build.yml'
 
 env:
-  FLUTTER_VERSION: '3.27.1'
+  FLUTTER_VERSION: '3.29.0'
   FRB_VERSION: '2.12.0'
   CARGO_TERM_COLOR: always
 
