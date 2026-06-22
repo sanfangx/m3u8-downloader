@@ -9,6 +9,14 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
     willConnectTo session: UISceneSession,
     options connectionOptions: UIScene.ConnectionOptions
   ) {
-    guard let _ = (scene as? UIWindowScene) else { return }
+    guard let windowScene = scene as? UIWindowScene else { return }
+    let engine = FlutterEngine(name: "io.flutter")
+    engine.run()
+    GeneratedPluginRegistrant.register(with: engine)
+    let controller = FlutterViewController(engine: engine, nibName: nil, bundle: nil)
+    let window = UIWindow(windowScene: windowScene)
+    window.rootViewController = controller
+    self.window = window
+    window.makeKeyAndVisible()
   }
 }
