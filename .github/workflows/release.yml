@@ -244,66 +244,6 @@ jobs:
          path: dist/macos/FerrisLoad-macos-${{ matrix.arch }}.zip
          retention-days: 7
 
-  build-ios:
-    name: Build iOS unsigned IPA
-    runs-on: macos-15
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: stable
-          flutter-version: ${{ env.FLUTTER_VERSION }}
-          cache: true
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          targets: aarch64-apple-ios
-
-      - name: Cache Rust dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            rust/target
-          key: rust-ios-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
-          restore-keys: rust-ios-
-
-      - name: Install flutter_rust_bridge_codegen
-        run: cargo install flutter_rust_bridge_codegen --version ${{ env.FRB_VERSION }} --locked || true
-
-      - name: Flutter pub get
-        run: flutter pub get
-
-      - name: Generate bridge code
-        run: flutter_rust_bridge_codegen generate
-
-      - name: Install CocoaPods dependencies
-        working-directory: ios
-        run: pod install
-
-      - name: Build iOS (unsigned)
-        run: flutter build ios --release --no-codesign
-
-      - name: Package unsigned IPA
-        run: |
-          mkdir -p dist/ios
-          mkdir -p Payload
-          cp -R build/ios/iphoneos/Runner.app Payload/
-          zip -9 -r dist/ios/FerrisLoad-iOS-unsigned.ipa Payload/
-          ls -lah dist/ios
-
-      - name: Upload iOS artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-unsigned
-          path: dist/ios/FerrisLoad-iOS-unsigned.ipa
-          retention-days: 7
-
  build-linux:
    name: Build Linux x64 portable bundle
    runs-on: ubuntu-latest
@@ -432,7 +372,6 @@ jobs:
      - build-windows
      - build-macos
      - build-linux
-      - build-ios
      - docker-api
     runs-on: ubuntu-latest
     steps:
@@ -473,4 +412,3 @@ jobs:
             artifacts/macos-x64/FerrisLoad-macos-x64.zip
             artifacts/macos-arm64/FerrisLoad-macos-arm64.zip
            artifacts/linux-x64/FerrisLoad-linux-x64-portable.tar.gz
-            artifacts/ios-unsigned/FerrisLoad-iOS-unsigned.ipa

@@ -1,0 +1,78 @@
+name: Build iOS (unsigned IPA)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'ios/**'
+      - 'rust/**'
+      - 'rust_builder/**'
+      - 'lib/**'
+      - 'pubspec.yaml'
+      - '.github/workflows/ios-build.yml'
+
+env:
+  FLUTTER_VERSION: '3.27.1'
+  FRB_VERSION: '2.12.0'
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build-ios:
+    name: Build iOS unsigned IPA
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios
+
+      - name: Cache Rust dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            rust/target
+          key: rust-ios-${{ hashFiles('rust/Cargo.lock', 'rust/Cargo.toml') }}
+          restore-keys: rust-ios-
+
+      - name: Install flutter_rust_bridge_codegen
+        run: cargo install flutter_rust_bridge_codegen --version ${{ env.FRB_VERSION }} --locked || true
+
+      - name: Flutter pub get
+        run: flutter pub get
+
+      - name: Generate bridge code
+        run: flutter_rust_bridge_codegen generate
+
+      - name: Install CocoaPods dependencies
+        working-directory: ios
+        run: pod install
+
+      - name: Build iOS (unsigned)
+        run: flutter build ios --release --no-codesign
+
+      - name: Package unsigned IPA
+        run: |
+          mkdir -p Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -9 -r FerrisLoad-iOS-unsigned.ipa Payload/
+          echo "=== IPA info ==="
+          ls -lah FerrisLoad-iOS-unsigned.ipa
+
+      - name: Upload iOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-unsigned
+          path: FerrisLoad-iOS-unsigned.ipa
+          retention-days: 7
